@@ -1,75 +1,112 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import { getPlanInfo } from '@/lib/usage'
+'use client'
+
+import { useState } from 'react'
+import { createCheckoutSession, getSubscription, cancelSubscription } from '@/lib/actions/billing'
 import Link from 'next/link'
 
-export default async function BillingPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+interface Plan {
+  name: string
+  price: string
+  interval: string
+  priceId: string
+  features: string[]
+  current: boolean
+}
 
-  if (!user) {
-    redirect('/login')
-  }
+interface Subscription {
+  stripe_subscription_id: string
+  stripe_customer_id: string
+  stripe_price_id: string
+  status: string
+  plan_type: string
+  current_period_start: string | null
+  current_period_end: string | null
+  cancel_at_period_end: boolean
+  trial_start: string | null
+  trial_end: string | null
+}
 
-  const { data: subscription } = await supabase
-    .from('subscriptions')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-
-  const { data: usageLogs } = await supabase
-    .from('usage_logs')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('action', 'ai_response')
-
-  const { data: businesses } = await supabase
-    .from('businesses')
-    .select('id')
-    .eq('user_id', user.id)
-
-  const planInfo = getPlanInfo(subscription?.plan_type || null)
-  const responsesUsed = usageLogs?.length || 0
-
-  const plans = [
-    {
-      name: 'Starter',
-      price: '$49',
-      interval: 'month',
-      priceId: 'price_starter',
-      features: ['50 AI responses/month', '1 location', 'Email support', 'Google Reviews'],
-      current: subscription?.plan_type === 'starter',
-    },
-    {
-      name: 'Professional',
-      price: '$99',
-      interval: 'month',
-      priceId: 'price_professional',
-      features: ['200 AI responses/month', '3 locations', 'Priority support', 'Analytics'],
-      current: subscription?.plan_type === 'professional',
-    },
-    {
-      name: 'Business',
-      price: '$199',
-      interval: 'month',
-      priceId: 'price_business',
-      features: ['Unlimited responses', '10 locations', '24/7 support', 'White-label'],
-      current: subscription?.plan_type === 'business',
-    },
-  ]
+function BillingClient({ 
+  initialSubscription, 
+  initialUsageCount,
+  initialBusinessCount,
+  plans 
+}: { 
+  initialSubscription: Subscription | null
+  initialUsageCount: number
+  initialBusinessCount: number
+  plans: Plan[]
+}) {
+  const [loading, setLoading] = useState<string | null>(null)
+  const [subscription, setSubscription] = useState<Subscription | null>(initialSubscription)
+  const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const hasActiveSubscription = subscription?.status === 'active' || subscription?.status === 'trialing'
+  
+  const currentPlan = plans.find(p => p.current) || plans[0]
+
+  const handleCheckout = async (priceId: string) => {
+    setLoading(priceId)
+    setError(null)
+    
+    const result = await createCheckoutSession(priceId)
+    
+    if ('error' in result) {
+      setError(result.error)
+      setLoading(null)
+      return
+    }
+    
+    if (result.url) {
+      window.location.href = result.url
+    }
+  }
+
+  const handleCancel = async () => {
+    if (!confirm('Are you sure you want to cancel your subscription?')) {
+      return
+    }
+    
+    setLoading('cancel')
+    setError(null)
+    
+    const result = await cancelSubscription(false)
+    
+    if ('error' in result) {
+      setError(result.error)
+    } else if (result.success) {
+      setSuccessMessage('Your subscription will be canceled at the end of the billing period.')
+      setSubscription(prev => prev ? { ...prev, cancel_at_period_end: true } : null)
+    }
+    
+    setLoading(null)
+  }
+
+  const getPlanInfo = (planType: string | null) => {
+    const planMap: Record<string, { responses: number | string; locations: number | string }> = {
+      starter: { responses: 50, locations: 1 },
+      professional: { responses: 200, locations: 3 },
+      business: { responses: 'Unlimited', locations: 10 },
+    }
+    return planMap[planType || 'starter'] || { responses: 0, locations: 0 }
+  }
+
+  const planInfo = getPlanInfo(subscription?.plan_type || null)
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Billing</h1>
-        <p className="text-sm text-gray-600">Manage your subscription and billing</p>
-      </div>
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+      
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+          {successMessage}
+        </div>
+      )}
 
       {hasActiveSubscription && (
         <div className="bg-white rounded-lg shadow p-6">
@@ -80,10 +117,10 @@ export default async function BillingPage() {
                 {subscription?.plan_type || 'Free'}
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                {responsesUsed} / {planInfo.responses === 'Unlimited' ? '∞' : planInfo.responses} AI responses used
+                {initialUsageCount} / {planInfo.responses === 'Unlimited' ? '∞' : planInfo.responses} AI responses used
               </p>
               <p className="text-sm text-gray-500">
-                {(businesses?.length || 0)} / {planInfo.locations === 'Unlimited' ? '∞' : planInfo.locations} locations
+                {initialBusinessCount} / {planInfo.locations === 'Unlimited' ? '∞' : planInfo.locations} locations
               </p>
               {subscription?.status === 'trialing' && subscription?.trial_end && (
                 <p className="text-sm text-blue-600 mt-1">
@@ -93,6 +130,11 @@ export default async function BillingPage() {
               {subscription?.status === 'active' && subscription?.current_period_end && (
                 <p className="text-sm text-gray-500">
                   Renews {new Date(subscription.current_period_end).toLocaleDateString()}
+                </p>
+              )}
+              {subscription?.cancel_at_period_end && (
+                <p className="text-sm text-red-600 mt-1">
+                  Canceling at end of billing period
                 </p>
               )}
             </div>
@@ -109,16 +151,15 @@ export default async function BillingPage() {
             </span>
           </div>
           
-          {!hasActiveSubscription && (
-            <div className="mt-4 pt-4 border-t">
-              <Link
-                href="/onboarding"
-                className="text-primary hover:text-primary/80 text-sm"
-              >
-                Complete onboarding to activate →
-              </Link>
-            </div>
-          )}
+          <div className="mt-4 pt-4 border-t flex gap-4">
+            <button
+              onClick={handleCancel}
+              disabled={loading === 'cancel' || subscription?.cancel_at_period_end}
+              className="text-sm text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading === 'cancel' ? 'Canceling...' : 'Cancel Subscription'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -126,14 +167,8 @@ export default async function BillingPage() {
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-6">
           <h2 className="text-lg font-semibold text-gray-900">Start your free trial</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Get started with 14-day free trial. Complete onboarding to activate your trial.
+            Get started with 14-day free trial. Select a plan below to begin.
           </p>
-          <Link
-            href="/onboarding"
-            className="mt-4 inline-block bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90"
-          >
-            Start Free Trial
-          </Link>
         </div>
       )}
 
@@ -173,14 +208,15 @@ export default async function BillingPage() {
                 ))}
               </ul>
               <button
+                onClick={() => handleCheckout(plan.priceId)}
+                disabled={plan.current || loading === plan.priceId}
                 className={`mt-6 w-full py-2 px-4 rounded-md text-sm font-medium ${
                   plan.current
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-primary text-white hover:bg-primary/90'
+                    : 'bg-primary text-white hover:bg-primary/90 disabled:opacity-50'
                 }`}
-                disabled={plan.current}
               >
-                {plan.current ? 'Current Plan' : 'Upgrade'}
+                {loading === plan.priceId ? 'Processing...' : plan.current ? 'Current Plan' : 'Subscribe'}
               </button>
             </div>
           ))}
@@ -193,9 +229,45 @@ export default async function BillingPage() {
           Manage your payment methods and billing history.
         </p>
         <p className="text-xs text-gray-500 mt-2">
-          Stripe integration coming soon. Add your payment details to upgrade.
+          Managed through Stripe. Click any plan above to add payment details.
         </p>
       </div>
     </div>
+  )
+}
+
+export default function BillingPage() {
+  return (
+    <BillingClient 
+      initialSubscription={null}
+      initialUsageCount={0}
+      initialBusinessCount={0}
+      plans={[
+        {
+          name: 'Starter',
+          price: '$49',
+          interval: 'month',
+          priceId: 'price_1T2QKYPKQTGcNVnelSJpssnt',
+          features: ['50 AI responses/month', '1 location', 'Email support', 'Google Reviews'],
+          current: false,
+        },
+        {
+          name: 'Professional',
+          price: '$99',
+          interval: 'month',
+          priceId: 'price_1T2QMNPKQTGcNVnefOeGDQco',
+          features: ['200 AI responses/month', '3 locations', 'Priority support', 'Analytics'],
+          current: false,
+        },
+        {
+          name: 'Business',
+          price: '$199',
+          interval: 'month',
+          priceId: 'price_1T2QO1PKQTGcNVneJZdXQHP6',
+          features: ['Unlimited responses', '10 locations', '24/7 support', 'White-label'],
+          current: false,
+        },
+      ]}
+    />
   )
 }
