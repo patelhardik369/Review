@@ -35,14 +35,18 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  const isAuthRoute = pathname.startsWith('/login') || 
-                      pathname.startsWith('/signup') || 
-                      pathname.startsWith('/api/auth')
-  const isProtectedRoute = pathname.startsWith('/dashboard') || 
-                          pathname.startsWith('/reviews') || 
-                          pathname.startsWith('/settings') || 
-                          pathname.startsWith('/billing') ||
-                          pathname.startsWith('/onboarding')
+  const isAuthRoute =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/forgot-password') ||
+    pathname.startsWith('/reset-password')
+
+  const isProtectedRoute =
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/reviews') ||
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/billing') ||
+    pathname.startsWith('/onboarding')
 
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone()
@@ -50,7 +54,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && isAuthRoute && !pathname.startsWith('/api/auth')) {
+  if (user && isAuthRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
@@ -61,6 +65,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/auth/callback|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
