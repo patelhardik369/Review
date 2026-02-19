@@ -139,14 +139,14 @@ AI-powered SaaS that automates business review responses using Google My Busines
 - [x] Build subscription creation flow
 - [x] Implement webhook handling for Stripe events
 - [x] Create subscription status tracking
-- [ ] Add plan upgrade/downgrade logic
+- [x] Add plan upgrade/downgrade logic
 - [x] Implement trial period support
 - [x] Handle payment failures
 
 ### Day 17: Billing Portal
 - [x] Integrate Stripe Customer Portal
 - [x] Build subscription management UI
-- [ ] Add invoice history and payment methods
+- [x] Add invoice history and payment methods
 - [ ] Implement billing email notifications
 - [ ] Create tax calculation
 - [ ] Add discount code support
