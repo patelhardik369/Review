@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { createCheckoutSession, getSubscription, cancelSubscription } from '@/lib/actions/billing'
+import { createCheckoutSession, getSubscription, cancelSubscription, createPortalSession } from '@/lib/actions/billing'
 import Link from 'next/link'
 
 interface Plan {
@@ -81,6 +81,23 @@ function BillingClient({
     }
     
     setLoading(null)
+  }
+
+  const handlePortal = async () => {
+    setLoading('portal')
+    setError(null)
+    
+    const result = await createPortalSession()
+    
+    if ('error' in result) {
+      setError(result.error)
+      setLoading(null)
+      return
+    }
+    
+    if (result.url) {
+      window.location.href = result.url
+    }
   }
 
   const getPlanInfo = (planType: string | null) => {
@@ -224,13 +241,28 @@ function BillingClient({
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Payment Method</h2>
-        <p className="text-sm text-gray-600">
-          Manage your payment methods and billing history.
-        </p>
-        <p className="text-xs text-gray-500 mt-2">
-          Managed through Stripe. Click any plan above to add payment details.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Payment Method</h2>
+            <p className="text-sm text-gray-600">
+              Manage your payment methods and billing history.
+            </p>
+          </div>
+          {hasActiveSubscription && (
+            <button
+              onClick={handlePortal}
+              disabled={loading === 'portal'}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:opacity-50 text-sm font-medium"
+            >
+              {loading === 'portal' ? 'Loading...' : 'Manage Billing'}
+            </button>
+          )}
+        </div>
+        {!hasActiveSubscription && (
+          <p className="text-xs text-gray-500 mt-2">
+            Subscribe to manage payment details.
+          </p>
+        )}
       </div>
     </div>
   )

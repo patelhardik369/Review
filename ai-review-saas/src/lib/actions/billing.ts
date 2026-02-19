@@ -194,3 +194,37 @@ export async function resumeSubscription(): Promise<{ success: boolean } | { err
     return { error: 'Failed to resume subscription' }
   }
 }
+
+export async function createPortalSession(): Promise<{ url: string } | { error: string }> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { error: 'Unauthorized' }
+    }
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/stripe/portal`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return { error: data.error || 'Failed to create portal session' }
+    }
+
+    return { url: data.url }
+  } catch (error) {
+    console.error('Create portal session error:', error)
+    return { error: 'Failed to create portal session' }
+  }
+}
