@@ -185,6 +185,43 @@ AI-powered SaaS that automates business review responses using Google My Busines
 
 ---
 
+## Current Priorities (Active Development)
+
+### P0: Core Features - COMPLETE ✅
+- [x] NextAuth.js with Google OAuth
+- [x] Review sync with Vercel Cron (every 6 hours)
+- [x] API rate limit handling
+
+### P1: Payments - COMPLETE ✅
+- [x] Stripe checkout flow
+- [x] Subscription upgrade/downgrade
+- [x] Customer Portal integration
+- [x] Invoice history
+
+### P2: Settings & Testing (In Progress)
+- [ ] Account settings page
+- [ ] Business profile management
+- [ ] Notification preferences
+
+### P3: Defer to Later (Launch Prep)
+- [ ] Database backup strategy
+- [ ] Daily/weekly email digests
+- [ ] CSV export
+- [ ] Browser compatibility testing
+- [ ] Claude API fallback
+- [ ] Guided tour
+- [ ] Success celebrations
+- [ ] Tax calculation
+- [ ] Discount codes
+- [ ] Team member management
+- [ ] API access management
+- [ ] Test usage limits
+- [ ] Security audit
+- [ ] Performance testing
+- [ ] Documentation update
+
+---
+
 ## Phase 4: Polish, Testing & Launch Prep (Week 4)
 
 ### Day 22: UI/UX Polish
