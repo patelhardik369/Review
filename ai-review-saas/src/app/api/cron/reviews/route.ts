@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { createGMBClient } from '@/lib/google/gmb'
+import { sendNewReviewNotification } from '@/lib/email/client'
+
+type AppSupabase = SupabaseClient<any, any, any>
 
 const RATE_LIMIT_DELAY = 1000
 const MAX_RETRIES = 3
@@ -30,6 +33,71 @@ async function fetchWithRetry<T>(
     }
   }
   throw new Error('Max retries exceeded')
+}
+
+async function getNotificationPrefs(
+  supabase: AppSupabase,
+  userId: string
+): Promise<{
+  email_enabled: boolean
+  email_for_new_reviews: boolean
+  email_for_negative_reviews: boolean
+} | null> {
+  const { data, error } = await supabase
+    .from('notification_preferences')
+    .select('email_enabled, email_for_new_reviews, email_for_negative_reviews')
+    .eq('user_id', userId)
+    .single()
+
+  if (error || !data) {
+    return null
+  }
+  return data as { email_enabled: boolean; email_for_new_reviews: boolean; email_for_negative_reviews: boolean }
+}
+
+async function sendNotificationIfEnabled(
+  supabase: AppSupabase,
+  userId: string,
+  businessName: string,
+  review: { reviewId: string; starRating: number; comment?: string; reviewer?: { displayName?: string } }
+) {
+  const prefs = await getNotificationPrefs(supabase, userId)
+  
+  if (!prefs || !prefs.email_enabled) {
+    return
+  }
+
+  const isNegative = review.starRating <= 2
+  const shouldNotify = isNegative 
+    ? prefs.email_for_negative_reviews 
+    : prefs.email_for_new_reviews
+
+  if (!shouldNotify) {
+    return
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('email')
+    .eq('id', userId)
+    .single()
+
+  const typedProfile = profile as { email: string } | null
+  if (!typedProfile?.email) {
+    return
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const reviewUrl = `${appUrl}/reviews`
+
+  await sendNewReviewNotification(
+    typedProfile.email,
+    businessName,
+    review.reviewer?.displayName || 'Anonymous',
+    review.starRating,
+    review.comment || '',
+    reviewUrl
+  )
 }
 
 export async function GET(request: Request) {
@@ -104,6 +172,14 @@ export async function GET(request: Request) {
             is_responded: false,
           }
 
+          const { data: existingReview } = await supabase
+            .from('reviews')
+            .select('id')
+            .eq('gmb_review_id', review.reviewId)
+            .single()
+
+          const isNewReview = !existingReview
+
           const { error: upsertError } = await supabase
             .from('reviews')
             .upsert({ 
@@ -115,6 +191,15 @@ export async function GET(request: Request) {
 
           if (upsertError) {
             console.error('Error upserting review:', upsertError)
+          }
+
+          if (isNewReview) {
+            sendNotificationIfEnabled(
+              supabase,
+              business.user_id,
+              business.gmb_location_name || 'Your Business',
+              review
+            ).catch(err => console.error('Error sending notification:', err))
           }
         }
 

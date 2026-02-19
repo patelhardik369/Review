@@ -427,6 +427,50 @@ export interface Database {
           created_at?: string
         }
       }
+      notification_preferences: {
+        Row: {
+          id: string
+          user_id: string
+          email_enabled: boolean
+          email_for_new_reviews: boolean
+          email_for_responses_needed: boolean
+          email_for_negative_reviews: boolean
+          email_digest: string
+          digest_send_day: number | null
+          digest_send_time: string
+          last_digest_sent: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          email_enabled?: boolean
+          email_for_new_reviews?: boolean
+          email_for_responses_needed?: boolean
+          email_for_negative_reviews?: boolean
+          email_digest?: string
+          digest_send_day?: number | null
+          digest_send_time?: string
+          last_digest_sent?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          email_enabled?: boolean
+          email_for_new_reviews?: boolean
+          email_for_responses_needed?: boolean
+          email_for_negative_reviews?: boolean
+          email_digest?: string
+          digest_send_day?: number | null
+          digest_send_time?: string
+          last_digest_sent?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
   }
 }

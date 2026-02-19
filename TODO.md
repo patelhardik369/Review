@@ -103,7 +103,7 @@ AI-powered SaaS that automates business review responses using Google My Busines
 - [x] Set up email service (SendGrid/Resend)
 - [x] Create email templates for new reviews
 - [x] Implement notification preferences
-- [ ] Add daily/weekly digest options
+- [x] Add daily/weekly digest options
 - [x] Set up transactional emails
 - [ ] Implement email unsubscribe
 
@@ -168,9 +168,9 @@ AI-powered SaaS that automates business review responses using Google My Busines
 - [x] Build limit notification system
 
 ### Day 20: Settings & Account Management
-- [ ] Build account settings page
-- [ ] Add business profile management
-- [ ] Implement notification preferences
+- [x] Build account settings page
+- [x] Add business profile management
+- [x] Implement notification preferences
 - [ ] Create team member management
 - [ ] Add API access management
 - [ ] Build data export/import
@@ -198,14 +198,14 @@ AI-powered SaaS that automates business review responses using Google My Busines
 - [x] Customer Portal integration
 - [x] Invoice history
 
-### P2: Settings & Testing (In Progress)
-- [ ] Account settings page
-- [ ] Business profile management
-- [ ] Notification preferences
+### P2: Settings & Testing (COMPLETE ✅)
+- [x] Account settings page
+- [x] Business profile management
+- [x] Notification preferences
 
 ### P3: Defer to Later (Launch Prep)
 - [ ] Database backup strategy
-- [ ] Daily/weekly email digests
+- [x] Daily/weekly email digests
 - [ ] CSV export
 - [ ] Browser compatibility testing
 - [ ] Claude API fallback
